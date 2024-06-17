@@ -56,6 +56,9 @@ function pre_customize_image__500_add_ha_to_image() {
 	# Updating grup fails in chroot and we do it later anyway
 	sed -i "/update-grub/d" homeassistant-supervised/DEBIAN/postinst
 
+    # Delete Check network connection
+	sed -i '67,72d' homeassistant-supervised/DEBIAN/postinst
+
 	# Build deb file
 	chmod 555 homeassistant-supervised/DEBIAN/p*
 	dpkg-deb -v --build --root-owner-group homeassistant-supervised
