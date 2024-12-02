@@ -36,14 +36,12 @@ gtk2-engines
 gtk2-engines-murrine
 gtk2-engines-pixbuf
 gvfs-backends
-hplip
 inputattach
 inxi
 keyutils
 laptop-detect
 libatk-adaptor
 libfontconfig1
-libfontembed1
 libfontenc1
 libgail-common
 libgl1-mesa-dri
@@ -70,7 +68,8 @@ pamix
 pasystray
 pavucontrol
 pavumeter
-policykit-1
+polkitd
+pkexec
 #printer-driver-all
 profile-sync-daemon
 pulseaudio
@@ -79,7 +78,6 @@ redshift
 slick-greeter
 smbclient
 software-properties-gtk
-spice-vdagent
 synaptic
 system-config-printer
 system-config-printer-common

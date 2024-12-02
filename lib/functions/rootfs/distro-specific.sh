@@ -11,8 +11,7 @@ function install_distribution_specific() {
 	display_alert "Applying distribution specific tweaks for" "${RELEASE:-}" "info"
 
 	# disable broken service, the problem is in default misconfiguration
-	# disable hostapd as it needs to be configured to start correctly
-	disable_systemd_service_sdcard smartmontools.service smartd.service hostapd.service
+	disable_systemd_service_sdcard smartmontools.service smartd.service
 
 	if [[ "${DISTRIBUTION}" == "Ubuntu" ]]; then
 
@@ -38,24 +37,13 @@ function install_distribution_specific() {
 
 	# install our base-files package (this replaces the original from Debian/Ubuntu)
 	if [[ "${KEEP_ORIGINAL_OS_RELEASE:-"no"}" != "yes" ]]; then
-		install_artifact_deb_chroot "armbian-base-files"
+		install_artifact_deb_chroot "armbian-base-files" "--allow-downgrades"
 	fi
 
 	# Set DNS server if systemd-resolved is in use
 	if [[ -n "$NAMESERVER" && -f "${SDCARD}"/etc/systemd/resolved.conf ]]; then
-		display_alert "Setup DNS server for systemd-resolved" "${NAMESERVER}" "info"
-
-		# Use resolved.conf.d/ directory as recommended by resolved itself
-		mkdir -p "${SDCARD}"/etc/systemd/resolved.conf.d/
-
-		cat <<- EOF > "${SDCARD}"/etc/systemd/resolved.conf.d/00-armbian-default-dns.conf
-			# Added by Armbian
-			#
-			# See resolved.conf(5) for details
-
-			[Resolve]
-			DNS=${NAMESERVER}
-		EOF
+		display_alert "Using systemd-resolved" "for DNS management" "info"
+		# This used to set a default DNS entry from $NAMESERVER into "${SDCARD}"/etc/systemd/resolved.conf.d/00-armbian-default-dns.conf -- no longer; better left to DHCP.
 	fi
 
 	# cleanup motd services and related files
@@ -137,7 +125,7 @@ function create_sources_list_and_deploy_repo_key() {
 			EOF
 			;;
 
-		sid|unstable) # sid is permanent unstable development and has no such thing as updates or security
+		sid | unstable) # sid is permanent unstable development and has no such thing as updates or security
 			cat <<- EOF > "${basedir}"/etc/apt/sources.list
 				deb http://${DEBIAN_MIRROR} $release main contrib non-free non-free-firmware
 				#deb-src http://${DEBIAN_MIRROR} $release main contrib non-free non-free-firmware
@@ -204,8 +192,8 @@ function create_sources_list_and_deploy_repo_key() {
 	[[ -n $LOCAL_MIRROR ]] && echo "deb ${SIGNED_BY}http://$LOCAL_MIRROR $RELEASE ${components[*]}" > "${basedir}"/etc/apt/sources.list.d/armbian.list
 
 	# disable repo if DISTRIBUTION_STATUS==eos, or if SKIP_ARMBIAN_REPO==yes, or if when==image-early.
-	if [[ "${when}" == "image-early" || \
-		"$(cat "${SRC}/config/distributions/${RELEASE}/support")" == "eos" || \
+	if [[ "${when}" == "image-early" ||
+		"$(cat "${SRC}/config/distributions/${RELEASE}/support")" == "eos" ||
 		"${SKIP_ARMBIAN_REPO}" == "yes" ]]; then
 		display_alert "Disabling Armbian repo" "${ARCH}-${RELEASE} :: skip:${SKIP_ARMBIAN_REPO:-"no"} when:${when}" "info"
 		mv "${SDCARD}"/etc/apt/sources.list.d/armbian.list "${SDCARD}"/etc/apt/sources.list.d/armbian.list.disabled

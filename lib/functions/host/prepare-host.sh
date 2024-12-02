@@ -282,6 +282,7 @@ function adaptative_prepare_host_dependencies() {
 		parted gdisk fdisk                       # partition tools @TODO why so many?
 		aria2 curl wget axel                     # downloaders et al
 		parallel                                 # do things in parallel (used for fast md5 hashing in initrd cache)
+		rdfind                                   # armbian-firmware-full/linux-firmware symlink creation step
 	)
 
 	# @TODO: distcc -- handle in extension?
@@ -290,24 +291,26 @@ function adaptative_prepare_host_dependencies() {
 	host_deps_add_extra_python # See python-tools.sh::host_deps_add_extra_python()
 
 	### Python3 -- required for Armbian's Python tooling, and also for more recent u-boot builds. Needs 3.9+; ffi-dev is needed for some Python packages when the wheel is not prebuilt
-	host_dependencies+=("python3-dev" "python3-setuptools" "python3-pip" "python3-pyelftools" "libffi-dev")
+	### 'python3-setuptools' and 'python3-pyelftools' moved to requirements.txt to make sure build hosts use the same/latest versions of these tools.
+	host_dependencies+=("python3-dev" "python3-pip" "libffi-dev")
 
 	# Needed for some u-boot's, lest "tools/mkeficapsule.c:21:10: fatal error: gnutls/gnutls.h"
 	host_dependencies+=("libgnutls28-dev")
 
-	# Noble and later releases do not carry "python3-distutils" https://docs.python.org/3.10/whatsnew/3.10.html#distutils-deprecated
-	if [[ "noble" == *"${host_release}"* ]]; then
+	# Noble/Trixie and later releases do not carry "python3-distutils" https://docs.python.org/3.10/whatsnew/3.10.html#distutils-deprecated
+	if [[ "$host_release" =~ ^(trixie|sid|noble|wilma)$ ]]; then
 		display_alert "python3-distutils not available on host release '${host_release}'" "distutils was deprecated with Python 3.12" "debug"
 	else
 		host_dependencies+=("python3-distutils")
 	fi
 
 	### Python2 -- required for some older u-boot builds
-	# Debian 'sid'/'bookworm' and Ubuntu 'lunar' does not carry python2 anymore; in this case some u-boot's might fail to build.
-	if [[ "sid bookworm trixie lunar mantic noble" == *"${host_release}"* ]]; then
-		display_alert "Python2 not available on host release '${host_release}'" "old(er) u-boot builds might/will fail" "wrn"
-	else
+	# Debian newer than 'bookworm' and Ubuntu newer than 'lunar'/'mantic' does not carry python2 anymore; in this case some u-boot's might fail to build.
+	# Last versions to support python2 were Debian 'bullseye' and Ubuntu 'jammy'
+	if [[ "bullseye jammy" == *"${host_release}"* ]]; then
 		host_dependencies+=("python2" "python2-dev")
+	else
+		display_alert "Python2 not available on host release '${host_release}'" "ancient u-boot versions might/will fail to build" "info"
 	fi
 
 	# Only install acng if asked to.
@@ -337,6 +340,12 @@ function adaptative_prepare_host_dependencies() {
 
 	if [[ "${wanted_arch}" != "amd64" ]]; then
 		host_dependencies+=(libc6-amd64-cross) # Support for running x86 binaries (under qemu on other arches)
+	fi
+
+	if [[ "${KERNEL_COMPILER}" == "clang" ]]; then
+		host_dependencies+=("clang")
+		host_dependencies+=("llvm")
+		host_dependencies+=("lld")
 	fi
 
 	declare -g EXTRA_BUILD_DEPS=""

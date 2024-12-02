@@ -20,7 +20,6 @@ flex
 git
 gpiod
 gnupg2
-haveged
 hdparm
 htop
 html2text
@@ -52,7 +51,6 @@ software-properties-common
 smartmontools
 stress
 sysfsutils
-sysstat
 unattended-upgrades
 unicode-data
 unzip

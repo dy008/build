@@ -37,6 +37,12 @@ generate_random_mac ()
 # Set a fixed random MAC for each Ethernet interface
 set_fixed_mac ()
 {
+
+	# we use random mac routine only with sytemd-network.
+	if ! grep 'renderer: networkd' /etc/netplan/*.yaml >/dev/null; then
+		return
+	fi
+
 	local netplan_config_file="/etc/netplan/20-eth-fixed-mac.yaml"
 
 	# Initialize a new Netplan config file
@@ -47,7 +53,7 @@ set_fixed_mac ()
 	EOF
 
 	# Iterate over each Ethernet interface
-	for iface in $(ip link | awk -F: '$0 !~ "lo|vir|wl|^[^0-9]"{print $2;getline}' | sed 's/^[ \t]*//' | grep "^e")
+	for iface in $(ip link | awk -F: '$0 !~ "lo|vir|wl|^[^0-9]"{print $2;getline}' | sed 's/^[ \t]*//' | grep "^e\|^wan\|^lan")
 	do
 		generate_random_mac
 

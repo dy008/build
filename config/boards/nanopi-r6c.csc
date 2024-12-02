@@ -2,16 +2,14 @@
 BOARD_NAME="NanoPi R6C"
 BOARDFAMILY="rockchip-rk3588"
 BOARD_MAINTAINER="ColorfulRhino"
-BOOTCONFIG="nanopi-r6c-rk3588s_defconfig" # vendor name, not standard, see hook below, set BOOT_SOC below to compensate
+BOOTCONFIG="nanopi-r6c-rk3588s_defconfig" # Mainline defconfig, enables booting from NVMe
 BOOT_SOC="rk3588"
-KERNEL_TARGET="vendor,current,edge"
+KERNEL_TARGET="edge,current,vendor"
 FULL_DESKTOP="yes"
 BOOT_LOGO="desktop"
 IMAGE_PARTITION_TABLE="gpt"
 BOOT_FDT_FILE="rockchip/rk3588s-nanopi-r6c.dtb"
 BOOT_SCENARIO="spl-blobs"
-DDR_BLOB='rk35/rk3588_ddr_lp4_2112MHz_lp5_2400MHz_v1.16.bin'
-BL31_BLOB='rk35/rk3588_bl31_v1.45.elf'
 
 function post_family_tweaks__nanopi_r6c_naming_audios() {
 	display_alert "$BOARD" "Renaming NanoPi R6C HDMI audio interface to human-readable form" "info"
@@ -36,11 +34,10 @@ function post_family_tweaks__nanopi_r6c_naming_udev_network_interfaces() {
 function post_family_config__nanopi_r6c_use_mainline_uboot() {
 	display_alert "$BOARD" "Using mainline U-Boot for $BOARD / $BRANCH" "info"
 
-	declare -g BOOTCONFIG="generic-rk3588_defconfig"               # Use generic defconfig which should boot all RK3588 boards
-	declare -g BOOTDELAY=1                                         # Wait for UART interrupt to enter UMS/RockUSB mode etc
-	declare -g BOOTSOURCE="https://github.com/u-boot/u-boot.git"   # We ❤️ Mainline U-Boot
-	declare -g BOOTBRANCH="tag:v2024.07-rc4"
-	declare -g BOOTPATCHDIR="v2024.07/board_${BOARD}"
+	declare -g BOOTDELAY=1                                       # Wait for UART interrupt to enter UMS/RockUSB mode etc
+	declare -g BOOTSOURCE="https://github.com/u-boot/u-boot.git" # We ❤️ Mainline U-Boot
+	declare -g BOOTBRANCH="tag:v2024.10"
+	declare -g BOOTPATCHDIR="v2024.10"
 	# Don't set BOOTDIR, allow shared U-Boot source directory for disk space efficiency
 
 	declare -g UBOOT_TARGET_MAP="BL31=${RKBIN_DIR}/${BL31_BLOB} ROCKCHIP_TPL=${RKBIN_DIR}/${DDR_BLOB};;u-boot-rockchip.bin"

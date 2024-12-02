@@ -47,7 +47,6 @@ gstreamer1.0-packagekit
 gstreamer1.0-plugins-base-apps
 gstreamer1.0-pulseaudio
 gvfs-backends
-hplip
 inputattach
 inxi
 keyutils
@@ -82,9 +81,9 @@ pasystray
 pavucontrol
 pavucontrol-qt
 pavumeter
-policykit-1
-policykit-1-gnome
-#printer-driver-all
+polkitd
+pkexec
+printer-driver-all
 profile-sync-daemon
 pulseaudio-module-bluetooth
 rofi
