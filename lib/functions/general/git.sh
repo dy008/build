@@ -57,7 +57,7 @@ function git_ensure_safe_directory() {
 		local git_dir="$1"
 		if [[ -e "$1/.git" ]]; then
 			display_alert "git: Marking all directories as safe, which should include" "$git_dir" "debug"
-			regular_git config --global --get safe.directory "$1" > /dev/null || regular_git config --global --add safe.directory "$1"
+			git config --global --get safe.directory "$1" > /dev/null || regular_git config --global --add safe.directory "$1"
 		fi
 	else
 		display_alert "git not installed" "a true wonder how you got this far without git - it will be installed for you" "warn"
@@ -276,20 +276,29 @@ function fetch_from_repo() {
 			else
 				display_alert "Updating submodules" "" "ext"
 				# FML: http://stackoverflow.com/a/17692710
-				for i in $(git config -f .gitmodules --get-regexp path | awk '{ print $2 }'); do
+				while read -r key path; do
+					# key is like: submodule.libfoo.path
+					# extract "libfoo" from "submodule.libfoo.path"
+					local name=${key#submodule.}   # -> libfoo.path
+					name=${name%.path}             # -> libfoo
+
 					cd "${git_work_dir}" || exit
+
 					local surl sref
-					surl=$(git config -f .gitmodules --get "submodule.$i.url")
-					sref=$(git config -f .gitmodules --get "submodule.$i.branch" || true)
+					surl=$(git config -f .gitmodules --get "submodule.${name}.url")
+					sref=$(git config -f .gitmodules --get "submodule.${name}.branch" || true)
+
 					if [[ -n $sref ]]; then
 						sref="branch:$sref"
 					else
 						sref="head"
 					fi
-					display_alert "Updating submodule" "$i - $surl - $sref" "git"
-					git_ensure_safe_directory "$workdir/$i"
-					fetch_from_repo "$surl" "$workdir/$i" "$sref"
-				done
+
+					display_alert "Updating submodule" "${name} - ${surl} - ${sref}" "git"
+					git_ensure_safe_directory "$workdir/$path"
+					fetch_from_repo "$surl" "$workdir/$path" "$sref"
+
+				done < <(git config -f .gitmodules --get-regexp 'submodule\..*\.path')
 			fi
 		fi
 	else

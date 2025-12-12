@@ -87,6 +87,10 @@ inputs:
     required: false
     default: "Build with [Armbian tools](https://github.com/armbian/build)"
 
+  armbian_release_tag:
+    description: "Armbian release tag"
+    required: false
+
 runs:
   using: "composite"
 
@@ -111,7 +115,7 @@ runs:
         passphrase: ${{ inputs.armbian_pgp_password }}
 
     - name: "Checkout Armbian os"
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: armbian/os
         fetch-depth: 0
@@ -119,15 +123,15 @@ runs:
         path: os
 
     - name: "Checkout Armbian build framework"
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: armbian/build
-        fetch-depth: 0
+        ref: ${{ inputs.armbian_branch }}
         clean: false
         path: build
 
     - name: "Checkout customisations"
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         fetch-depth: 0
         clean: false
@@ -136,14 +140,40 @@ runs:
     - shell: bash
       run: |
 
-        # read version from upstream Armbian OS
-        cat os/stable.json | jq '.version' | sed "s/\"//g" | sed 's/^/ARMBIAN_VERSION=/' >> $GITHUB_ENV
-        [[ "${{ inputs.armbian_version }}" != '' ]] && echo "ARMBIAN_VERSION=${{ inputs.armbian_version }}" >> $GITHUB_ENV
+        # Resolve base version (prefer workflow input if provided)
+        BASE_VERSION="${{ inputs.armbian_version }}"
+        if [ -z "$BASE_VERSION" ]; then
+          BASE_VERSION="$(jq -r '.version' os/stable.json)"
+        fi
+
+        # Preserve optional 'v' prefix but strip it for math
+        PREFIX=''
+        if [[ "$BASE_VERSION" == v* ]]; then
+          PREFIX='v'
+          BASE_NO_PREFIX="${BASE_VERSION#v}"
+        else
+          BASE_NO_PREFIX="$BASE_VERSION"
+        fi
+
+        # Drop any pre-release/build metadata (e.g., -rc1, +meta)
+        CORE="${BASE_NO_PREFIX%%[-+]*}"
+
+        # Split and increment patch
+        IFS='.' read -r MAJOR MINOR PATCH <<<"$CORE"
+        PATCH=${PATCH:-0}
+        NEXT_PATCH=$((PATCH + 1))
+        NEXT_VERSION="${PREFIX}${MAJOR}.${MINOR}.${NEXT_PATCH}"
+
+        {
+          echo "ARMBIAN_VERSION=${NEXT_VERSION}"
+        } >> "$GITHUB_ENV"
 
         # copy os userpatches and custom
         mkdir -pv build/userpatches
         rsync -av os/userpatches/. build/userpatches/
-        [[ -d custom/userpatches ]] && rsync -av custom/userpatches/. build/userpatches/
+        if [[ -d custom/userpatches ]]; then
+          rsync -av custom/userpatches/. build/userpatches/
+        fi
 
     - shell: bash
       run: |
@@ -163,9 +193,12 @@ runs:
           DESKTOP_ENVIRONMENT_CONFIG_NAME="config_base"
         fi
 
-        # go to build folder and checkout
+        # go to build folder
         cd build
-        git checkout ${{ inputs.armbian_branch }}
+
+        # default build command below doesn't prepare host dependencies
+        sudo ./compile.sh requirements
+        sudo chown -R $USER:$USER .
 
         # execute build command
         ./compile.sh "${{ inputs.armbian_target }}" \
@@ -194,7 +227,7 @@ runs:
 
     - uses: ncipollo/release-action@v1
       with:
-        tag: "${{ env.ARMBIAN_VERSION }}"
+        tag: ${{ inputs.armbian_release_tag != '' && inputs.armbian_release_tag || env.ARMBIAN_VERSION }}
         name: "${{ inputs.armbian_release_tittle }}"
         artifacts: "${{ inputs.armbian_artifacts }}*"
         allowUpdates: true

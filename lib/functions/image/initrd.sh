@@ -62,6 +62,7 @@ update_initramfs() {
 			[[ -d "${chroot_target}/etc/dropbear-initramfs/" ]] && initrd_files_to_hash+=("${chroot_target}/etc/dropbear-initramfs/")
 			[[ -d "${chroot_target}/etc/dropbear/initramfs/" ]] && initrd_files_to_hash+=("${chroot_target}/etc/dropbear/initramfs/")
 		fi
+		initrd_files_to_hash+=("${chroot_target}/etc/crypttab") # for updates to rootdev UUID
 	fi
 
 	# Find all the affected files; parallel md5sum sum them; invert hash and path, and remove chroot prefix.
@@ -75,7 +76,7 @@ update_initramfs() {
 	display_alert "initrd cache hash" "${initrd_hash}" "debug"
 
 	display_alert "Mounting chroot for update-initramfs" "update-initramfs" "debug"
-	deploy_qemu_binary_to_chroot "${chroot_target}"
+	deploy_qemu_binary_to_chroot "${chroot_target}" "initrd"# is undeployed at the end of this function
 
 	mount_chroot "$chroot_target/"
 
@@ -125,7 +126,7 @@ update_initramfs() {
 
 	display_alert "Unmounting chroot" "update-initramfs" "debug"
 	umount_chroot "${chroot_target}/"
-	undeploy_qemu_binary_from_chroot "${chroot_target}"
+	undeploy_qemu_binary_from_chroot "${chroot_target}" "initrd" # deployed at the start of this function
 
 	# no need to remove ${initrd_cache_current_manifest_filepath} manually, since it's under ${WORKDIR}
 	return 0 # avoid future short-circuit problems

@@ -110,6 +110,7 @@ function compile_armbian-bsp-cli() {
 		FORCE_UBOOT_UPDATE=$FORCE_UBOOT_UPDATE
 		OVERLAY_DIR="$OVERLAY_DIR"
 		VENDOR="$VENDOR"
+		VENDORCOLOR="$VENDORCOLOR"
 		VENDORDOCS="$VENDORDOCS"
 		VENDORURL="$VENDORURL"
 		VENDORSUPPORT="$VENDORSUPPORT"
@@ -140,7 +141,22 @@ function compile_armbian-bsp-cli() {
 		EOF
 
 		# Using bootscript, copy it to /usr/share/armbian
-		run_host_command_logged cp -pv "${bootscript_info[bootscript_file_fullpath]}" "${destination}/usr/share/armbian/${bootscript_info[bootscript_dst]}"
+
+		case "${bootscript_info[bootscript_src]}" in
+		*'.template')
+			display_alert "Rendering boot script template" "${bootscript_info[bootscript_file_fullpath]} -> ${destination}/usr/share/armbian/${bootscript_info[bootscript_dst]}" "info"
+			run_host_command_logged cat "${bootscript_info[bootscript_file_fullpath]}" |
+				render_bootscript_template > "${destination}/usr/share/armbian/${bootscript_info[bootscript_dst]}"
+
+			if ! proof_rendered_bootscript_template "${destination}/usr/share/armbian/${bootscript_info[bootscript_dst]}" ; then
+				exit_with_error "Render of bootscript template was not successful. Inspect '${destination}/usr/share/armbian/${bootscript_info[bootscript_dst]}' for unrendered variables."
+			fi
+			;;
+		*)
+			display_alert "Deploying boot script" "${bootscript_info[bootscript_file_fullpath]} -> ${destination}/usr/share/armbian/${bootscript_info[bootscript_dst]}" "info"
+			run_host_command_logged cp -pv "${bootscript_info[bootscript_file_fullpath]}" "${destination}/usr/share/armbian/${bootscript_info[bootscript_dst]}"
+			;;
+		esac
 
 		if [[ "${bootscript_info[has_bootenv]}" == "yes" ]]; then
 			run_host_command_logged cp -pv "${bootscript_info[bootenv_file_fullpath]}" "${destination}"/usr/share/armbian/armbianEnv.txt
@@ -269,6 +285,7 @@ function reversion_armbian-bsp-cli_deb_contents() {
 		Depends: bash, linux-base, u-boot-tools, initramfs-tools, lsb-release, fping, device-tree-compiler${depends_base_files}
 		Replaces: zram-config, armbian-bsp-cli-${BOARD}${EXTRA_BSP_NAME} (<< ${REVISION})
 		Breaks: armbian-bsp-cli-${BOARD}${EXTRA_BSP_NAME} (<< ${REVISION})
+		Provides: armbian-bsp-cli
 	EOF
 
 	artifact_deb_reversion_unpack_data_deb

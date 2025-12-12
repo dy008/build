@@ -28,7 +28,8 @@ function calculate_rootfs_cache_id() {
 	declare -a extension_hooks_to_hash=("custom_apt_repo")
 	declare -a extension_hooks_hashed=("$(dump_extension_method_sources_functions "${extension_hooks_to_hash[@]}")")
 	declare hash_hooks="undetermined"
-	hash_hooks="$(echo "${extension_hooks_hashed[@]}" | sha256sum | cut -d' ' -f1)"
+	declare legacy_debootstrap="${LEGACY_DEBOOTSTRAP:-"no"}"
+	hash_hooks="$(echo "${extension_hooks_hashed[@]}" LDB=${legacy_debootstrap,,} | sha256sum | cut -d' ' -f1)"
 	declare hash_hooks_short="${hash_hooks:0:${short_hash_size}}"
 
 	# AGGREGATED_ROOTFS_HASH is produced by aggregation.py
@@ -66,8 +67,8 @@ function create_new_rootfs_cache() {
 
 	display_alert "Creating new rootfs cache" "'${cache_name}'" "info"
 
-	create_new_rootfs_cache_via_debootstrap # in rootfs-create.sh
-	create_new_rootfs_cache_tarball         # in rootfs-create.sh
+	create_new_rootfs_cache_via_debootstrap # in rootfs-create.sh; deploys & undeploys the qemu binary
+	create_new_rootfs_cache_tarball         # in rootfs-create.sh; no qemu binary available here
 
 	return 0 # protect against possible future short-circuiting above this
 }
@@ -132,4 +133,4 @@ function extract_rootfs_artifact() {
 }
 
 # This comment strategically introduced to force a rebuild of all rootfs, as this file's contents are hashed into all rootfs versions.
-# Just a number to force rebuild 002
+# Just a number to force rebuild 005

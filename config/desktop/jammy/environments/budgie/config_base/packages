@@ -83,7 +83,6 @@ hplip
 indicator-printers
 inputattach
 inxi
-kerneloops
 keyutils
 language-pack-gnome-de
 language-pack-gnome-en
@@ -109,7 +108,7 @@ libplank1
 libplank-common
 libproxy1-plugin-gsettings
 libu2f-udev
-libwmf0.2-7-gtk
+libwmf-0.2-7-gtk
 libxapp1
 libxcursor1
 gdm3
